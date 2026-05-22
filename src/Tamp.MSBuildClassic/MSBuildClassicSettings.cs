@@ -105,15 +105,15 @@ public abstract class MSBuildClassicSettingsBase
         // Configuration / Platform aliases — emitted BEFORE the general Properties dictionary
         // so an explicit SetProperty("Configuration", ...) call would silently override.
         // (Adopters who want the override should call SetProperty, not SetConfiguration.)
-        if (!string.IsNullOrEmpty(Configuration)) args.Add($"/p:Configuration={Configuration}");
-        if (!string.IsNullOrEmpty(Platform)) args.Add($"/p:Platform={Platform}");
+        if (!string.IsNullOrEmpty(Configuration)) args.Add(PropertyArg("Configuration", Configuration!));
+        if (!string.IsNullOrEmpty(Platform)) args.Add(PropertyArg("Platform", Platform!));
 
         // Verb-specific extras (e.g. /restore switch on Build).
         foreach (var a in BuildExtraArguments()) args.Add(a);
 
         // Properties.
-        foreach (var kv in Properties) args.Add($"/p:{kv.Key}={kv.Value}");
-        foreach (var kv in RestoreProperties) args.Add($"/restoreProperty:{kv.Key}={kv.Value}");
+        foreach (var kv in Properties) args.Add(PropertyArg(kv.Key, kv.Value));
+        foreach (var kv in RestoreProperties) args.Add($"/restoreProperty:{kv.Key}={EscapePropertyValue(kv.Value)}");
 
         // Verbosity.
         args.Add($"/v:{VerbosityToken(Verbosity)}");
@@ -148,6 +148,19 @@ public abstract class MSBuildClassicSettingsBase
         MSBuildVerbosity.Diagnostic => "diagnostic",
         _ => throw new InvalidOperationException($"Unknown MSBuildVerbosity: {v}"),
     };
+
+    /// <summary>
+    /// MSBuild's CLI parses <c>;</c> and <c>,</c> as property-list separators inside a
+    /// <c>/p:Name=Value</c> token. Without escaping, <c>/p:DefineConstants=TRACE;DEBUG</c>
+    /// fails with <c>MSB1006: Property is not valid. Switch: DEBUG</c>. URL-encoding both
+    /// characters is the canonical workaround.
+    /// </summary>
+    internal static string EscapePropertyValue(string value)
+        => value.Replace(",", "%2C").Replace(";", "%3B");
+
+    /// <summary>Helper for emitting a single <c>/p:Name=Value</c> arg with separator escaping.</summary>
+    private static string PropertyArg(string name, string value)
+        => $"/p:{name}={EscapePropertyValue(value)}";
 }
 
 /// <summary>Fluent setters for the common knobs.</summary>

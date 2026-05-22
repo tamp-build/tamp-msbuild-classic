@@ -4,7 +4,17 @@ All notable changes to `Tamp.MSBuildClassic` are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] — Unreleased
+## [0.1.1] — Unreleased
+
+### Fixed
+
+- **TAM-270** — URL-encode `;` and `,` in `/p:Name=Value` and `/restoreProperty:Name=Value` argument values. MSBuild's CLI parses `;` and `,` as property-list separators inside a `/p:` token, so a raw value like `DefineConstants=TRACE;DEBUG` would fail with `MSB1006: Property is not valid. Switch: DEBUG`. Now emitted as `TRACE%3BDEBUG` per the canonical MSBuild escape. Applies to:
+  - `Properties` dict entries
+  - `RestoreProperties` dict entries
+  - `Configuration` alias (defensive)
+  - `Platform` alias (defensive)
+
+## [0.1.0] — 2026-05-22
 
 ### Added
 

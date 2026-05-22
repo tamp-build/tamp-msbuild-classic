@@ -94,8 +94,57 @@ public sealed class MSBuildClassicTests
             .SetProperty("DefineConstants", "TRACE;LEGACY")
             .SetProperty("DebugType", "embedded"));
 
-        Assert.Contains("/p:DefineConstants=TRACE;LEGACY", plan.Arguments);
+        // TAM-270: ; and , in property values must be URL-encoded so MSBuild's CLI doesn't
+        // split the value into separate property switches.
+        Assert.Contains("/p:DefineConstants=TRACE%3BLEGACY", plan.Arguments);
         Assert.Contains("/p:DebugType=embedded", plan.Arguments);
+    }
+
+    [Fact]
+    public void Semicolon_In_Property_Value_Url_Encoded()
+    {
+        // The textbook DefineConstants=TRACE;DEBUG;EXTRA case — MSBuild CLI would parse the
+        // raw value as three separate /p: switches without this escape.
+        var plan = MSBuildClassic.Build(FakeTool(), s => s
+            .SetProject("a.sln")
+            .SetProperty("DefineConstants", "TRACE;DEBUG;EXTRA"));
+
+        Assert.Contains("/p:DefineConstants=TRACE%3BDEBUG%3BEXTRA", plan.Arguments);
+        Assert.DoesNotContain(plan.Arguments, a => a.Contains("DefineConstants=TRACE;", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Comma_In_Property_Value_Url_Encoded()
+    {
+        var plan = MSBuildClassic.Build(FakeTool(), s => s
+            .SetProject("a.sln")
+            .SetProperty("NoWarn", "CS1591,CS8632"));
+
+        Assert.Contains("/p:NoWarn=CS1591%2CCS8632", plan.Arguments);
+    }
+
+    [Fact]
+    public void RestoreProperty_Value_Url_Encoded_Too()
+    {
+        var plan = MSBuildClassic.Build(FakeTool(), s => s
+            .SetProject("a.sln")
+            .SetRestoreProperty("RestoreSources", "https://feed1/v3;https://feed2/v3"));
+
+        Assert.Contains("/restoreProperty:RestoreSources=https://feed1/v3%3Bhttps://feed2/v3", plan.Arguments);
+    }
+
+    [Fact]
+    public void Configuration_And_Platform_Aliases_Url_Encode_Defensively()
+    {
+        // Aliases shouldn't normally contain separators, but the same code path is applied
+        // so that, e.g., a Configuration value like "Release;Whatever" wouldn't silently break.
+        var plan = MSBuildClassic.Build(FakeTool(), s => s
+            .SetProject("a.sln")
+            .SetConfiguration("Release;Audit")
+            .SetPlatform("Any CPU;Mixed"));
+
+        Assert.Contains("/p:Configuration=Release%3BAudit", plan.Arguments);
+        Assert.Contains("/p:Platform=Any CPU%3BMixed", plan.Arguments);
     }
 
     [Fact]
@@ -406,9 +455,13 @@ public sealed class MSBuildClassicTests
             foreach (var (n, v) in pairs) s.SetProperty(n, v);
         });
 
+        // Mirror the wrapper's escape behavior (TAM-270) so the assertion still holds when
+        // a randomly-generated value happens to contain ',' or ';'.
+        static string Escape(string v) => v.Replace(",", "%2C").Replace(";", "%3B");
+
         foreach (var (n, v) in pairs)
         {
-            Assert.Contains($"/p:{n}={v}", plan.Arguments);
+            Assert.Contains($"/p:{n}={Escape(v)}", plan.Arguments);
         }
     }
 }
