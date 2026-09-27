@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [0.1.1] — Unreleased
 
+### Added
+
+- Package now ships XML documentation files (`.xml`) alongside the assembly, so consumers get IntelliSense and API docs. (Mirrors [tamp-build/tamp#3](https://github.com/tamp-build/tamp/pull/50).)
+
 ### Fixed
 
 - **TAM-270** — URL-encode `;` and `,` in `/p:Name=Value` and `/restoreProperty:Name=Value` argument values. MSBuild's CLI parses `;` and `,` as property-list separators inside a `/p:` token, so a raw value like `DefineConstants=TRACE;DEBUG` would fail with `MSB1006: Property is not valid. Switch: DEBUG`. Now emitted as `TRACE%3BDEBUG` per the canonical MSBuild escape. Applies to:
