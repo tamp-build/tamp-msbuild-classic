@@ -5,6 +5,14 @@
     <RootNamespace>Tamp.MSBuildClassic.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!--
+      The Legacy.NetFx48 integration fixture has its own .csproj + .cs
+      files. Exclude them from the test project's default Compile /
+      Content / EmbeddedResource / None globs so they don't get compiled
+      into the test assembly; we only consume them at runtime by spawning
+      msbuild.exe against the fixture .sln.
+    -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);Fixtures\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,6 +25,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Tamp.MSBuildClassic\Tamp.MSBuildClassic.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Mirror the fixture tree under the test bin so integration tests can locate it via assembly.Location. -->
+    <Content Include="Fixtures\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>
