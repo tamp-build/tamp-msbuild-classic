@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    SDK-style .NET Framework 4.8 fixture for Tamp.MSBuildClassic integration
+    tests. Modern PackageReference style, but TargetFramework=net48 forces the
+    classic Windows msbuild.exe path (dotnet build refuses net48). A trivial
+    Newtonsoft.Json PackageReference makes the Restore step do real work.
+
+    AfterTargets="Build" target writes a marker file the test harness can
+    inspect to verify property propagation (DefineConstants, Configuration)
+    without round-tripping through assembly metadata.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Legacy.NetFx48</RootNamespace>
+    <AssemblyName>Legacy.NetFx48</AssemblyName>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <Target Name="WriteBuildMarker" AfterTargets="Build">
+    <PropertyGroup>
+      <BuildMarkerPath>$(OutputPath)build-marker.txt</BuildMarkerPath>
+    </PropertyGroup>
+    <ItemGroup>
+      <BuildMarkerLines Include="Configuration=$(Configuration)" />
+      <BuildMarkerLines Include="DefineConstants=$(DefineConstants)" />
+      <BuildMarkerLines Include="MSBuildProjectName=$(MSBuildProjectName)" />
+      <BuildMarkerLines Include="TargetFramework=$(TargetFramework)" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(BuildMarkerPath)" Lines="@(BuildMarkerLines)" Overwrite="true" />
+    <Message Importance="High" Text="Wrote build marker: $(BuildMarkerPath)" />
+  </Target>
+
+</Project>
